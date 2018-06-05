@@ -87,4 +87,10 @@ module.exports = function TwitchChatRelay(dispatch) {
       message: msg
     })
   }
+  
+  this.destructor = function() {
+    if (client.readyState() == 'OPEN') client.disconnect()
+    delete require.cache[require.resolve('./config.json')]
+    delete require.cache[require.resolve('tmi.js')]
+  }
 }
