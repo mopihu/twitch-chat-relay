@@ -1,5 +1,5 @@
 # twitch-chat-relay
-A `tera-proxy module, that acts as a chat relay between Twitch and TERA. It connects your in game `/6` private chat to Twitch chat, so you can read/send messages and use chat actions from inside the game.
+A `tera-proxy` module, that acts as a chat relay between Twitch and TERA. It connects your in game `/6` private chat to Twitch chat, so you can read/send messages and use chat actions from inside the game.
 
 ## Config
 Open `config.json` and enter your details.
