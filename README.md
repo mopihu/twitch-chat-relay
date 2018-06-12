@@ -9,7 +9,7 @@ Open `config.json` and enter your details.
   "password": "twitch_oauth_password",
   "channel": "#channel_to_join",
   "debug": true,
-  "reconnect: true
+  "reconnect": true
 }
 ```
 You can generate OAuth password [here](https://twitchapps.com/tmi/), `channel` can be your own `#username`, or if you want to chat on someone else's stream, then their `#username`.
