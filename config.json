@@ -1,5 +1,7 @@
 {
   "username": "",
   "password": "",
-  "channel": ""
+  "channel": "",
+  "debug": true,
+  "reconnect": true
 }
