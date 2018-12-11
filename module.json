@@ -1,4 +1,5 @@
 {
-    "servers": ["https://raw.githubusercontent.com/mopihu/twitch-chat-relay/master/"],
-    "supportUrl": ""
+	"disableAutoUpdate": false,
+	"servers": ["https://raw.githubusercontent.com/mopihu/twitch-chat-relay/master/"],
+	"supportUrl": ""
 }
