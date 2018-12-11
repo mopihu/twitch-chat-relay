@@ -1,5 +1,11 @@
 {
-	"disableAutoUpdate": false,
-	"servers": ["https://raw.githubusercontent.com/mopihu/twitch-chat-relay/master/"],
-	"supportUrl": ""
+    "disableAutoUpdate": false,
+    "name": "twitch-chat-relay",
+    "author": "mopihu",
+    "description": "Chat relay between Twitch and TERA.",
+    "version": "1.0",
+		"servers": ["https://raw.githubusercontent.com/mopihu/twitch-chat-relay/master/"],
+    "options": {
+        "niceName": "TwitchChatRelay"
+    }
 }
