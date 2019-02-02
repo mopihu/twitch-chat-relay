@@ -12,6 +12,5 @@
         "reloadable": true
     },
     "dependencies": {},
-    "conflicts": [],
-    "disableAutoUpdate": false
+    "conflicts": []
 }
