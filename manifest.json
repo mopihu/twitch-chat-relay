@@ -7,7 +7,6 @@
         },
         "index.js": "ff1103bf06c8d9caae82cedf11410f78c8bcc6267ecedfbb2e74a9031801a7d9",
         "module.json": "1e4ca567731cd819122717b65ab1f4a6d8a5627cd40185c6223e431a4be5ace5",
-        "module.sha256": "682d31ede1e8c63099b695b1595b6f45768d206ff768f82c58658a43101cf404",
         "node_modules/options/Makefile": "cf16495bcf48372e2b09b7622ad36654d4f84c189b0b1a4160187788412c23ea",
         "node_modules/options/README.md": "fe1288c0a9cc8a64abc65f39321481579871417aff3412e7f41f323219f9f1eb",
         "node_modules/options/lib/options.js": "c6ed27f9acb9623e800acf9b5c3c14020b95c8557d11148115b7d70e767eb00d",
