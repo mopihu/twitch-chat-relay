@@ -3,6 +3,7 @@ const config = require('./config.json');
 
 const PRIVATE_CHANNEL_ID = -6 >>> 0;
 const PRIVATE_CHANNEL_NAME = 'Twitch';
+const AVAILABLE_COLORS = ['Blue', 'BlueViolet', 'CadetBlue', 'Chocolate', 'Coral', 'DodgerBlue', 'Firebrick', 'GoldenRod', 'Green', 'HotPink', 'OrangeRed', 'Red', 'SeaGreen', 'SpringGreen', 'YellowGreen'];
 
 module.exports = function TwitchChatRelay(mod) {
   let username = config.username;
@@ -12,11 +13,11 @@ module.exports = function TwitchChatRelay(mod) {
   let currentChannel = config.channel || `#${username}`;
 
   if (!username || !password) {
-    console.log('[twitch-chat-relay] If you want to use the relay, please enter your details in config.json');
+    mod.log('If you want to use the relay, please enter your details in config.json!');
     return;
   }
 
-  var options = {
+  const options = {
     options: {
       debug: debug
     },
@@ -30,24 +31,20 @@ module.exports = function TwitchChatRelay(mod) {
     channels: [currentChannel]
   };
 
-  var client = new tmi.client(options);
+  const client = new tmi.client(options);
 
-  client
-    .connect()
-    .then(function(data) {
-      // notice(` -- Connected to ${currentChannel}`)
-    })
-    .catch(function(err) {
-      console.log(err);
-    });
+  client.on('chat', function (channel, userstate, message, self) {
+    msg(message, userstate['username']);
+  });
 
-  client.on('chat', function(channel, userstate, message, self) {
-    chat(userstate['username'], message);
+  client.on('action', function (channel, userstate, message, self) {
+    msg(` ${userstate['username']} ${message}`);
   });
 
   mod.hook('S_LOAD_CLIENT_USER_SETTING', 'raw', () => {
     process.nextTick(() => {
       join();
+      connect();
     });
   });
 
@@ -72,107 +69,213 @@ module.exports = function TwitchChatRelay(mod) {
 
   mod.hook('C_CHAT', 1, event => {
     if (event.channel == 16) {
-      client.say(currentChannel, event.message.replace(/<[^>]*>/g, ''));
+      if (client.readyState() == 'OPEN') {
+        client.say(currentChannel, event.message.replace(/<[^>]*>/g, ''));
+      } else {
+        mod.command.message('You are not connected to Twitch.');
+        mod.command.message(' /8 tw connect');
+      }
       return false;
     }
   });
 
-  mod.command.add('tw', (opt, arg1, arg2, arg3) => {
-    switch (opt) {
-      case 'channel':
-        if (!arg1) {
-          mod.command.message('Please specify the channel you wish to join:');
-          mod.command.message('/8 tw ch [#channelname]');
-          return;
-        }
-        let newChannel = arg1;
-        if (newChannel == currentChannel) {
-          mod.command.message(`You're already on ${currentChannel}`);
-          return;
-        }
-        client
-          .part(currentChannel)
-          .then(function(data) {
-            notice(` -- You've left ${currentChannel}`);
-          })
-          .catch(function(err) {
-            console.log(err);
-          });
-        client
-          .join(newChannel)
-          .then(function(data) {
-            notice(` -- You've joined ${newChannel}`);
-          })
-          .catch(function(err) {
-            console.log(err);
-          });
-        currentChannel = newChannel;
-        break;
+  mod.hook('S_RETURN_TO_LOBBY', 'raw', () => {
+    disconnect();
+  });
 
-      case 'ban':
-        if (!arg1) {
-          mod.command.message('Please specify the user you wish to ban:');
-          mod.command.message('/8 tw ban [username] [reason]');
-          mod.command.message('Parameter [reason] is optional.');
-          return;
-        }
-        let banUser = arg1;
-        let banReason = arg2 || 'none';
-        client
-          .ban(currentChannel, banUser, banReason)
-          .then(function(data) {
-            notice(` -- You've banned ${banUser} (Reason: ${banReason})`);
-          })
-          .catch(function(err) {
-            console.log(err);
-          });
-        break;
-
-      case 'unban':
-        if (!arg1) {
-          mod.command.message('Please specify the user you wish to unban:');
-          mod.command.message('/8 tw unban [username]');
-          return;
-        }
-        let unbanUser = arg1;
-        client
-          .unban(currentChannel, unbanUser)
-          .then(function(data) {
-            notice(` -- You've unbanned ${unbanUser}`);
-          })
-          .catch(function(err) {
-            console.log(err);
-          });
-        break;
-
-      case 'timeout':
-        if (!arg1) {
-          mod.command.message('Please specify the user you wish to timeout:');
-          mod.command.message('/8 tw timeout [username] [timer] [reason]');
-          mod.command.message('Parameters [timer] and [reason] are optional.');
-          return;
-        }
-        let timeoutUser = arg1;
-        let timer = arg2 || 300;
-        let timeoutReason = arg3 || 'none';
-        client
-          .timeout(currentChannel, timeoutUser, timer, timeoutReason)
-          .then(function(data) {
-            notice(` -- You've timed out ${timeoutUser} for ${timer} seconds (Reason: ${timeoutReason})`);
-          })
-          .catch(function(err) {
-            console.log(err);
-          });
-        break;
-
-      default:
-        mod.command.message('Twitch Chat Relay for TERA Proxy. Usage:');
-        mod.command.message('/6 or /twitch for chat');
-        mod.command.message('/8 tw channel [#channel]');
-        mod.command.message('/8 tw ban [user] [reason]');
-        mod.command.message('/8 tw unban [user]');
+  mod.command.add(['tw','twitch'], {
+    $default() {
+      mod.command.message('Twitch Chat Relay for TERA Proxy. Usage:');
+      mod.command.message('/6 or /twitch for chat');
+      mod.command.message('/8 tw action [message]');
+      mod.command.message('/8 tw ban [user] [reason]');
+      mod.command.message('/8 tw clear');
+      mod.command.message('/8 tw channel [channel]');
+      mod.command.message('/8 tw connect');
+      mod.command.message('/8 tw disconnect');
+      mod.command.message('/8 tw host [channel]');
+      mod.command.message('/8 tw timeout [username] [timer] ["ban reason"]');
+      mod.command.message('/8 tw unban [username]');
+      mod.command.message('/8 tw unhost');
+      mod.command.message('/8 tw whisper [username] ["your message"]');
+    },
+    action(...args) {
+      if (!args[0]) {
+        mod.command.message('Please specify the action message you wish to send:');
+        mod.command.message('/8 tw action [your action message]');
+        return;
+      }
+      let message = args.join(' ');
+      client
+      .action(currentChannel, message)
+      .then(function(data) {
+        // msg(` -- You've sent an action message`);
+      })
+      .catch(function(err) {
+        mod.error(err);
+      });
+    },
+    ban(...args) {
+      if (!args[0]) {
+        mod.command.message('Please specify the user you wish to ban:');
+        mod.command.message('/8 tw ban [username] [reason]');
+        mod.command.message('Parameter [reason] is optional.');
+        return;
+      }
+      let banUser = args[0];
+      let banReason = args[1] || 'none';
+      client
+        .ban(currentChannel, banUser, banReason)
+        .then(function(data) {
+          msg(` -- You've banned ${banUser} (Reason: ${banReason})`);
+        })
+        .catch(function(err) {
+          mod.error(err);
+        });
+    },
+    clear() {
+      client.clear(currentChannel)
+        .then(function(data) {
+          msg(` -- You've cleared all messages on #${currentChannel})`);
+        })
+        .catch(function(err) {
+          mod.error(err);
+        });
+    },
+    channel(...args) {
+      if (!args[0]) {
+        mod.command.message('Please specify the channel you wish to join:');
+        mod.command.message('/8 tw channel [#channelname]');
+        return;
+      }
+      let newChannel = args[0];
+      if (newChannel == currentChannel) {
+        mod.command.message(`You're already on ${currentChannel}`);
+        return;
+      }
+      if (!newChannel.startsWith('#')) newChannel = `#${newChannel}`;
+      client
+        .part(currentChannel)
+        .then(function(data) {
+          msg(` -- You've left ${currentChannel}`);
+          currentChannel = null;
+        })
+        .catch(function(err) {
+          mod.error(err);
+        });
+      client
+        .join(newChannel)
+        .then(function(data) {
+          msg(` -- You've joined ${newChannel}`);
+          currentChannel = newChannel;
+        })
+        .catch(function(err) {
+          mod.error(err);
+        });
+    },
+    color(clr) {
+      if (!clr) {
+        mod.command.message('Please specify the color you wish to use:');
+        mod.command.message('/8 tw color [color]');
+        return;
+      }
+      if (!AVAILABLE_COLORS.includes(clr)) {
+        mod.command.message(`Available colors: ${AVAILABLE_COLORS.join(', ')}`);
+        return;
+      }
+      client
+        .color(clr)
+        .then(function(data) {
+          msg(` -- You've changed your color to ${clr}`);
+        })
+        .catch(function(err) {
+          mod.error(err);
+        });
+    },
+    connect() {
+      connect();
+    },
+    disconnect() {
+      disconnect();
+    },
+    host(...args) {
+      if (!args[0]) {
+        mod.command.message('Please specify the channel you wish to host:');
+        mod.command.message('/8 tw host [channel]');
+        return;
+      }
+      let hostChannel = args[0];
+      client
+        .host(currentChannel, hostChannel)
+        .then(function(data) {
+          msg(` -- You are now hosting ${hostChannel}`);
+        })
+        .catch(function(err) {
+          mod.error(err);
+        });
+    },
+    timeout(...args) {
+      if (!args[0]) {
+        mod.command.message('Please specify the user you wish to timeout:');
         mod.command.message('/8 tw timeout [username] [timer] [reason]');
-        break;
+        mod.command.message('Parameters [timer] and [reason] are optional.');
+        return;
+      }
+      let timeoutUser = args[0];
+      let timer = args[1] || 300;
+      let timeoutReason = args[2] || 'none';
+      client
+        .timeout(currentChannel, timeoutUser, timer, timeoutReason)
+        .then(function(data) {
+          msg(` -- You've timed out ${timeoutUser} for ${timer} seconds (Reason: ${timeoutReason})`);
+        })
+        .catch(function(err) {
+          mod.error(err);
+        });
+    },
+    unban(...args) {
+      if (!args[0]) {
+        mod.command.message('Please specify the user you wish to unban:');
+        mod.command.message('/8 tw unban [username]');
+        return;
+      }
+      let unbanUser = args[0];
+      client
+        .unban(currentChannel, unbanUser)
+        .then(function(data) {
+          msg(` -- You've unbanned ${unbanUser}`);
+        })
+        .catch(function(err) {
+          mod.error(err);
+        });
+    },
+    unhost() {
+      client
+        .unhost(currentChannel)
+        .then(function(data) {
+          msg(` -- You've stopped hosting`);
+        })
+        .catch(function(err) {
+          mod.error(err);
+        });
+    },
+    whisper(...args) {
+      if (!args[1]) {
+        mod.command.message('Please specify the user and message you wish to whisper:');
+        mod.command.message('/8 tw whisper [username] ["your message"]');
+      }
+      let whisperUser = args[0];
+      let whisperMsg = args[1];
+      client.whisper(whisperUser, whisperMsg)
+        .then(function(data) {
+          msg(` -- You've whispered ${whisperUser}`);
+        })
+        .catch(function(err) {
+          mod.error(err);
+        });
+    },
+    $none() {
+      //
     }
   });
 
@@ -185,7 +288,31 @@ module.exports = function TwitchChatRelay(mod) {
     });
   }
 
-  function chat(author, msg) {
+  function connect() {
+    if (client.readyState() == 'OPEN') return;
+    client
+      .connect()
+      .then(function(data) {
+        msg(` -- Connected to ${currentChannel}`);
+      })
+      .catch(function(err) {
+        mod.error(err);
+      });
+  }
+
+  function disconnect() {
+    if (client.readyState() == 'CLOSED') return;
+    client
+      .disconnect()
+      .then(function(data) {
+        msg(` -- Disconnected from ${currentChannel}`);
+      })
+      .catch(function(err) {
+        mod.error(err);
+      });
+  }
+
+  function msg(msg, author) {
     mod.send('S_CHAT', 2, {
       channel: 16,
       authorID: 0,
@@ -197,21 +324,9 @@ module.exports = function TwitchChatRelay(mod) {
     });
   }
 
-  function notice(msg) {
-    mod.send('S_CHAT', 2, {
-      channel: 16,
-      authorID: 0,
-      unk1: 0,
-      gm: 0,
-      founder: 0,
-      authorName: '',
-      message: msg
-    });
-  }
-
   this.destructor = function() {
-    mod.command.remove('tw');
-    if (client.readyState() == 'OPEN') client.disconnect();
+    disconnect();
+    mod.command.remove(['tw','twitch']);
     delete require.cache[require.resolve('./config.json')];
     delete require.cache[require.resolve('tmi.js')];
   };
