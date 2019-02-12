@@ -55,17 +55,19 @@ module.exports = function TwitchChatRelay(mod) {
     event.index === 5 ? false : undefined
   );
 
-  mod.hook('C_REQUEST_PRIVATE_CHANNEL_INFO', 1, event => {
-    if (event.channelId == PRIVATE_CHANNEL_ID) {
-      mod.send('S_REQUEST_PRIVATE_CHANNEL_INFO', 1, {
-        owner: 1,
-        password: 0,
-        members: [],
-        friends: []
-      });
-      return false;
-    }
-  });
+  if (mod.platform !== 'classic') {
+    mod.hook('C_REQUEST_PRIVATE_CHANNEL_INFO', 1, event => {
+      if(event.channelId === PRIVATE_CHANNEL_ID) {
+        mod.send('S_REQUEST_PRIVATE_CHANNEL_INFO', 1, {
+          owner: 1,
+          password: 0,
+          members: [],
+          friends: []
+        });
+        return false;
+      }
+    });
+  }
 
   mod.hook('C_CHAT', 1, event => {
     if (event.channel == 16) {
