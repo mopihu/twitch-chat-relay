@@ -1,32 +1,42 @@
 const tmi = require('tmi.js');
 const config = require('./config.json');
 
+const SettingsUI = require('tera-mod-ui').Settings;
+
 const PRIVATE_CHANNEL_ID = -6 >>> 0;
 const PRIVATE_CHANNEL_NAME = 'Twitch';
 const AVAILABLE_COLORS = ['Blue', 'BlueViolet', 'CadetBlue', 'Chocolate', 'Coral', 'DodgerBlue', 'Firebrick', 'GoldenRod', 'Green', 'HotPink', 'OrangeRed', 'Red', 'SeaGreen', 'SpringGreen', 'YellowGreen'];
 
 module.exports = function TwitchChatRelay(mod) {
-  let username = config.username;
-  let password = config.password;
-  let debug = config.debug || true;
-  let reconnect = config.reconnect || true;
-  let currentChannel = config.channel || `#${username}`;
+  let ui = null;
+  if (global.TeraProxy.GUIMode) {
+      ui = new SettingsUI(mod, require('./settings_structure'), mod.settings, { height: 232 });
+      ui.on('update', settings => {
+          mod.settings = settings;
+      });
+      this.destructor = () => {
+          if (ui) {
+              ui.close();
+              ui = null;
+          }
+      };
+  }
 
-  if (!username || !password) {
-    mod.log('If you want to use the relay, please enter your details in config.json!');
-    return;
+  let currentChannel = mod.settings.channel || `#${mod.settings.username}`;
+  if (!mod.settings.username || !mod.settings.password) {
+    ui.show();
   }
 
   const options = {
     options: {
-      debug: debug
+      debug: mod.settings.debug
     },
     connection: {
-      reconnect: reconnect
+      reconnect: mod.settings.reconnect
     },
     identity: {
-      username: username,
-      password: password
+      username: mod.settings.username,
+      password: mod.settings.password
     },
     channels: [currentChannel]
   };
@@ -55,19 +65,17 @@ module.exports = function TwitchChatRelay(mod) {
     event.index === 5 ? false : undefined
   );
 
-  if (mod.platform !== 'classic') {
-    mod.hook('C_REQUEST_PRIVATE_CHANNEL_INFO', 1, event => {
-      if(event.channelId === PRIVATE_CHANNEL_ID) {
-        mod.send('S_REQUEST_PRIVATE_CHANNEL_INFO', 1, {
-          owner: 1,
-          password: 0,
-          members: [],
-          friends: []
-        });
-        return false;
-      }
-    });
-  }
+  mod.hook('C_REQUEST_PRIVATE_CHANNEL_INFO', 1, event => {
+    if (event.channelId == PRIVATE_CHANNEL_ID) {
+      mod.send('S_REQUEST_PRIVATE_CHANNEL_INFO', 1, {
+        owner: 1,
+        password: 0,
+        members: [],
+        friends: []
+      });
+      return false;
+    }
+  });
 
   mod.hook('C_CHAT', 1, event => {
     if (event.channel == 16) {
@@ -87,19 +95,7 @@ module.exports = function TwitchChatRelay(mod) {
 
   mod.command.add(['tw','twitch'], {
     $default() {
-      mod.command.message('Twitch Chat Relay for TERA Proxy. Usage:');
-      mod.command.message('/6 or /twitch for chat');
-      mod.command.message('/8 tw action [message]');
-      mod.command.message('/8 tw ban [user] [reason]');
-      mod.command.message('/8 tw clear');
-      mod.command.message('/8 tw channel [channel]');
-      mod.command.message('/8 tw connect');
-      mod.command.message('/8 tw disconnect');
-      mod.command.message('/8 tw host [channel]');
-      mod.command.message('/8 tw timeout [username] [timer] ["ban reason"]');
-      mod.command.message('/8 tw unban [username]');
-      mod.command.message('/8 tw unhost');
-      mod.command.message('/8 tw whisper [username] ["your message"]');
+      help();
     },
     action(...args) {
       if (!args[0]) {
@@ -124,8 +120,8 @@ module.exports = function TwitchChatRelay(mod) {
         mod.command.message('Parameter [reason] is optional.');
         return;
       }
-      let banUser = args[0];
-      let banReason = args[1] || 'none';
+      let banUser = args.shift();
+      let banReason = args.join(' ') || 'none';
       client
         .ban(currentChannel, banUser, banReason)
         .then(function(data) {
@@ -138,7 +134,7 @@ module.exports = function TwitchChatRelay(mod) {
     clear() {
       client.clear(currentChannel)
         .then(function(data) {
-          msg(` -- You've cleared all messages on #${currentChannel})`);
+          msg(` -- You've cleared all messages on ${currentChannel})`);
         })
         .catch(function(err) {
           mod.error(err);
@@ -223,9 +219,9 @@ module.exports = function TwitchChatRelay(mod) {
         mod.command.message('Parameters [timer] and [reason] are optional.');
         return;
       }
-      let timeoutUser = args[0];
-      let timer = args[1] || 300;
-      let timeoutReason = args[2] || 'none';
+      let timeoutUser = args.shift();
+      let timer = args.shift() || 300;
+      let timeoutReason = args.join(' ') || 'none';
       client
         .timeout(currentChannel, timeoutUser, timer, timeoutReason)
         .then(function(data) {
@@ -264,10 +260,10 @@ module.exports = function TwitchChatRelay(mod) {
     whisper(...args) {
       if (!args[1]) {
         mod.command.message('Please specify the user and message you wish to whisper:');
-        mod.command.message('/8 tw whisper [username] ["your message"]');
+        mod.command.message('/8 tw whisper [username] [your message]');
       }
-      let whisperUser = args[0];
-      let whisperMsg = args[1];
+      let whisperUser = args.shift();
+      let whisperMsg = args.join(' ');
       client.whisper(whisperUser, whisperMsg)
         .then(function(data) {
           msg(` -- You've whispered ${whisperUser}`);
@@ -277,9 +273,30 @@ module.exports = function TwitchChatRelay(mod) {
         });
     },
     $none() {
-      //
+      if (ui) {
+        ui.show();
+      } else {
+        help();
+      }
     }
   });
+
+  function help() {
+    mod.command.message('Twitch Chat Relay for TERA Proxy. Usage:');
+    mod.command.message('/6 or /twitch for chat');
+    mod.command.message('/8 tw action [message]');
+    mod.command.message('/8 tw ban [user] [reason]');
+    mod.command.message('/8 tw clear');
+    mod.command.message('/8 tw channel [channel]');
+    mod.command.message('/8 tw color');
+    mod.command.message('/8 tw connect');
+    mod.command.message('/8 tw disconnect');
+    mod.command.message('/8 tw host [channel]');
+    mod.command.message('/8 tw timeout [username] [timer] [ban reason]');
+    mod.command.message('/8 tw unban [username]');
+    mod.command.message('/8 tw unhost');
+    mod.command.message('/8 tw whisper [username] [your message]');
+  }
 
   function join() {
     mod.send('S_JOIN_PRIVATE_CHANNEL', 1, {
@@ -315,21 +332,20 @@ module.exports = function TwitchChatRelay(mod) {
   }
 
   function msg(msg, author) {
-    mod.send('S_CHAT', 2, {
+    mod.send('S_CHAT', 3, {
       channel: 16,
-      authorID: 0,
-      unk1: 0,
+      gameId: 0,
+      isWorldEventTarget: 0,
       gm: 0,
       founder: 0,
-      authorName: author,
+      name: author,
       message: msg
     });
   }
 
-  this.destructor = function() {
+  this.destructor = () => {
     disconnect();
     mod.command.remove(['tw','twitch']);
-    delete require.cache[require.resolve('./config.json')];
     delete require.cache[require.resolve('tmi.js')];
   };
 };
