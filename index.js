@@ -1,5 +1,4 @@
 const tmi = require('tmi.js');
-const config = require('./config.json');
 
 const SettingsUI = require('tera-mod-ui').Settings;
 
