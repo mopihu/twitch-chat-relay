@@ -43,7 +43,7 @@
         "node_modules/ws/lib/Sender.js": "3bacfeb4b507543854a1ed95b4d2dd7c443ba7198da604ff81bcbcd3d71add74",
         "node_modules/ws/lib/Validation.js": "761cbc7b9ebc4cc2c5ba9e8f4c664e0c49ca8138ca5ace6ea2d430a9fe6ce8eb",
         "node_modules/ws/lib/websocket-server.js": "d9de963e661e70a1f056af7f7d2395d4d3c1c529a2dac1aab34c03fb93a03a14",
-        "node_modules/ws/lib/Websocket.js": "81c3ce5dbe629fb9b4e4696ff9957ed0e9377527ae774b84757bf71b28786c31",
+        "node_modules/ws/lib/WebSocket.js": "81c3ce5dbe629fb9b4e4696ff9957ed0e9377527ae774b84757bf71b28786c31",
         "node_modules/ws/package.json": "af5ecbc878564d3600307ba6cd8933cbb0ba916bca3d3090e0e065c2d486a841",
         "settings_migrator.js": "99471b56670e32c7294a0c41737685cfd5d0814fd072ea68056b128a4d432c83",
         "settings_structure.js": "de1174570c41f0c55afc293529b4e14d1b51fa6bc14d7b22f788d3efc6064852"
