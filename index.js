@@ -9,21 +9,26 @@ const AVAILABLE_COLORS = ['Blue', 'BlueViolet', 'CadetBlue', 'Chocolate', 'Coral
 module.exports = function TwitchChatRelay(mod) {
   let ui = null;
   if (global.TeraProxy.GUIMode) {
-      ui = new SettingsUI(mod, require('./settings_structure'), mod.settings, { height: 232 });
-      ui.on('update', settings => {
-          mod.settings = settings;
-      });
-      this.destructor = () => {
-          if (ui) {
-              ui.close();
-              ui = null;
-          }
-      };
+    ui = new SettingsUI(mod, require('./settings_structure'), mod.settings, { height: 202 });
+    ui.on('update', settings => {
+      mod.settings = settings;
+    });
+    this.destructor = () => {
+      if (ui) {
+        ui.close();
+        ui = null;
+      }
+    };
   }
 
   let currentChannel = mod.settings.channel || `#${mod.settings.username}`;
   if (!mod.settings.username || !mod.settings.password) {
-    ui.show();
+    if (global.TeraProxy.GUIMode) {
+      ui.show();
+    } else {
+      mod.log('Please either use GUI mode or enter your details in config.json');
+      return
+    }
   }
 
   const options = {
@@ -57,14 +62,14 @@ module.exports = function TwitchChatRelay(mod) {
     });
   });
 
-  mod.hook('S_JOIN_PRIVATE_CHANNEL', 1, event =>
+  mod.hook('S_JOIN_PRIVATE_CHANNEL', 2, event =>
     event.index === 5 ? false : undefined
   );
   mod.hook('C_LEAVE_PRIVATE_CHANNEL', 1, event =>
     event.index === 5 ? false : undefined
   );
 
-  mod.hook('C_REQUEST_PRIVATE_CHANNEL_INFO', 1, event => {
+  mod.hook('C_REQUEST_PRIVATE_CHANNEL_INFO', 2, event => {
     if (event.channelId == PRIVATE_CHANNEL_ID) {
       mod.send('S_REQUEST_PRIVATE_CHANNEL_INFO', 1, {
         owner: 1,
@@ -298,7 +303,7 @@ module.exports = function TwitchChatRelay(mod) {
   }
 
   function join() {
-    mod.send('S_JOIN_PRIVATE_CHANNEL', 1, {
+    mod.send('S_JOIN_PRIVATE_CHANNEL', 2, {
       index: 5,
       id: PRIVATE_CHANNEL_ID,
       unk: [],
